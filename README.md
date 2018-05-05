@@ -1,6 +1,6 @@
 # Robot-factory-
 
-Goal: I'd like you to design two Python functions that assign a set of tasks to a set of available robots. The functions should take as arguments: i) the current task queue, ii) the current available robot set, and iii) a distance matrix between locations of interest in the warehouse (from 0 to n). The functions should return an allocation represented by a list of lists.
+Goal: Design two Python functions that assign a set of tasks to a set of available robots. The functions should take as arguments: i) the current task queue, ii) the current available robot set, and iii) a distance matrix between locations of interest in the warehouse (from 0 to n). The functions should return an allocation represented by a list of lists.
 
 An example function structure is given as:
 
