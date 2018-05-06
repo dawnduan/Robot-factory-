@@ -140,6 +140,7 @@ class ConsolePrinter():
                     if node_index in self.data.loc_to_task:
                         plan_output += 'Task' + ' {node_index} -> '.format(
                             node_index=self.data.loc_to_task[node_index])
+                        allocation.append([self.data.loc_to_task[node_index], vehicle_id])
                 route_dist += self.distance_matrix[node_index][next_node_index]
                 index = self.assignment.Value(self.routing.NextVar(index))
                 
