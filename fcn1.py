@@ -1,8 +1,8 @@
 from math import hypot
 import numpy as np
 from math import inf
-
-def find_closest_rob(mtx, tasks, robots, cnt):
+##### HELPERS
+def find_closest_rob(mtx, tasks, robots, cnt, output):
     # mtx r rows x t columns 
     # avai_tsk
     # return assignment in length of r
@@ -12,18 +12,20 @@ def find_closest_rob(mtx, tasks, robots, cnt):
     res = {}
     for i in all_robs:
         if cnt != 0:
-            min_idx = np.unravel_index(np.argmin(mtx, axis=None), mtx.shape)
+            min_cost = np.argmin(mtx, axis=None)
+            min_idx = np.unravel_index(min_cost, mtx.shape)
             t = min_idx[TASK]; r = min_idx[ROBOT]
             if t in res:
                 print('duplicate task')
-            else:
+            else: #task allocation
                 res[t] = r 
+                output = process_printer(output, r, t, min_cost)
                 mtx[min_idx[ROBOT], :] = inf; mtx[:, min_idx[TASK]] = inf
                 cnt -= 1
         else: # no task - completed!
             print('completed, no closest rob need to be found')
             break
-    return res, mtx
+    return res, mtx, output
     
 def compute_time_mtx(tasks, robots, speed, distance_matrix):
     # tasks - lis, len = t
@@ -39,6 +41,36 @@ def compute_time_mtx(tasks, robots, speed, distance_matrix):
             mtx[r][t] = distance_matrix[loc_r][loc_t]/speed
     return mtx
     
+###### PRINTERS
+def preface_printer(robot_set):
+    o = []; tm = []
+    for i,r in enumerate(robot_set):
+        preface = 'Route for robot {0}:\n'.format(i)
+        preface += 'Starting at' + ' {node_index} -> '.format(
+                        node_index=r.location)
+        o.append(preface); tm.append(0)
+    o.append(tm)
+    return o
+    
+def process_printer(o, robot, task, time_cost):
+    ENDING = -1  # idx assignment
+    o[robot] += 'Task' + ' {node_index} -> '.format(
+                            node_index=task)
+                            
+    o[ENDING][robot] += time_cost
+    return o
+    
+def back_to_0(robot_set, output, distance_matrix, SPEED):
+    ENDING = -1  # idx assignment
+    for i, robot in enumerate(robot_set):
+        output[i] += 'Back to'+' {node_index}\n'.format(
+                            node_index=0)
+        output[ENDING][i] += distance_matrix[robot.location][0]/SPEED #update time cost for returning
+    return output
+
+
+
+###### MAIN
 def algorithmOne(task_queue, robot_set, distance_matrix):   
 # 
 # Goal: I'd like you to design two Python functions that assign a set of tasks to a set of available robots. 
@@ -58,14 +90,16 @@ def algorithmOne(task_queue, robot_set, distance_matrix):
 #     task 1 is allocated to robot 1 (1 -> 1).
 # 
 # An example function structure is given as: 
-    allocation = []; SPEED = 1 # robot travel speed
+    allocation = []; SPEED = 1; ENDING = -1 # robot travel speed
     all_robots = range(0, len(robot_set)); all_tasks = range(0, len(task_queue))
+    output = preface_printer(robot_set)
+    # initialization of avai_task for track of task queue
     avai_tsk = [i for i in all_tasks]
     time_mtx = compute_time_mtx(task_queue, robot_set, SPEED, distance_matrix)
-    round = 0
+    # time_mtx as objective fcn (cost)
     while len(avai_tsk) != 0:
         # avai_tsk keep tracks of rob assignment
-        res, time_mtx = find_closest_rob(time_mtx, task_queue, robot_set, len(avai_tsk))
+        res, time_mtx, output = find_closest_rob(time_mtx, task_queue, robot_set, len(avai_tsk), output)
         for (t, r) in res.items():
             robot_set[r].location = task_queue[t].location
             allocation.append([t,r])
@@ -75,35 +109,14 @@ def algorithmOne(task_queue, robot_set, distance_matrix):
             for r in all_robots:
                 loc_r = robot_set[r].location
                 time_mtx[r][i] = distance_matrix[loc_r][loc_t]/SPEED
+                
+    output = back_to_0(robot_set, output, distance_matrix, SPEED)
+    # print the outcome
+    total_dist = output[-1]
+    output[-1] = 'Total time of all routes: {dist}'.format(dist=max(total_dist))
+    [print(i + '\n') for i in output]
+
     return allocation
     
-    
-def test_compute_time_mtx():
-    class vari:
-        def __init__(self, loc):
-            self.location = loc
-    task_queue = [vari(i)for i in range(4)]
-    robot_set = [vari(i) for i in range(4)]
-    distance_matrix = [[3,2,1,4],
-                        [6,5,3,1],
-                        [2,5,6,4],
-                        [2,3,5,7]]     
-                        
-    # Locations in block unit
-    locations = \
-            [(4, 4), # depot
-                (2, 0), (8, 0), # row 0
-                (0, 1), (1, 1),
-                (5, 2), (7, 2),
-                (3, 3), (6, 3),
-                (5, 5), (8, 5),
-                (1, 6), (2, 6),
-                (3, 7), (6, 7),
-                (0, 8), (7, 8)]
-    # locations in meters using the city block dimension
-                        
-    a = algorithmOne(task_queue, robot_set, distance_matrix)
-    print(len(set([i for [i,j] in a])) == 4)
-    print(a)
 
-test_compute_time_mtx()
+        
