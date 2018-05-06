@@ -42,13 +42,12 @@ class DataProblem():
     def end_locations(self):
         """Gets end locations"""
         return self._end_locations
-    
+        
     @property
     def loc_to_task(self):
         """Gets end locations"""
         return self._loc_to_task
     
-
 #######################
 # Problem Constraints #
 #######################
@@ -96,6 +95,7 @@ class ConsolePrinter():
         self._data = data
         self._routing = routing
         self._assignment = assignment
+        self._distance_matrix = distance_matrix
 
     @property
     def data(self):
@@ -116,11 +116,6 @@ class ConsolePrinter():
     def distance_matrix(self):
         """Gets distance matrix"""
         return self._distance_matrix
-        
-    @property
-    def distance_matrix(self):
-        """Gets distance matrix"""
-        return self._distance_matrix
 
     def print(self):
         """Prints assignment on console"""
@@ -134,16 +129,24 @@ class ConsolePrinter():
                 node_index = self.routing.IndexToNode(index)
                 next_node_index = self.routing.IndexToNode(
                     self.assignment.Value(self.routing.NextVar(index)))
-                route_dist += distance_matrix[node_index][next_node_index]
-                allocation.append([self.data.loc_to_task[node_index], vehicle_id])
-                plan_output += ' {node_index} -> '.format(
-                    node_index=node_index)
+                #print(node_index,next_node_index,  route_dist)
+                if route_dist != 0: # allocate task assignment
+                    allocation.append([self.data.loc_to_task[node_index], vehicle_id])
+                    plan_output += 'Task' + ' {node_index} -> '.format(
+                        node_index=self.data.loc_to_task[node_index])
+                else: # starting position of a robot
+                    plan_output += 'Starting at' + ' {node_index} -> '.format(
+                        node_index=node_index)
+                    if node_index in self.data.loc_to_task:
+                        plan_output += 'Task' + ' {node_index} -> '.format(
+                            node_index=self.data.loc_to_task[node_index])
+                route_dist += self.distance_matrix[node_index][next_node_index]
                 index = self.assignment.Value(self.routing.NextVar(index))
                 
 
             node_index = self.routing.IndexToNode(index)
             total_dist.append(route_dist)
-            plan_output += ' {node_index}\n'.format(
+            plan_output += 'Back to'+' {node_index}\n'.format(
                             node_index=node_index)
             plan_output += 'Time for the route {0}: {dist}\n'.format(
                 vehicle_id,
@@ -152,7 +155,9 @@ class ConsolePrinter():
         print('Total Time for all routes: {dist}'.format(dist=max(total_dist)))
         return allocation
         
-###
+#################
+# AlgorithmZero #
+#################
 def algorithmZero(task_queue, robot_set, distance_matrix):
     """
     updated version from ortools, vehicle routing problem
@@ -172,10 +177,11 @@ def algorithmZero(task_queue, robot_set, distance_matrix):
     # Setting first solution heuristic (cheapest addition).
     search_parameters = pywrapcp.RoutingModel.DefaultSearchParameters()
     search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.LOCAL_CHEAPEST_ARC)
+        routing_enums_pb2.FirstSolutionStrategy.SAVINGS)
     # Solve the problem.
     assignment = routing.SolveWithParameters(search_parameters)
     
     printer = ConsolePrinter(d, routing, assignment, distance_matrix)
-    a = printer.print()
-    return a
+    allocation = printer.print()
+    return allocation
+    
